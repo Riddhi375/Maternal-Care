@@ -298,32 +298,57 @@ export const MedicationsPage: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Action Buttons: Mark Taken / Skip */}
+                {/* Action Buttons: Mark Taken / Skip / Reset */}
                 <div className="flex items-center gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    fullWidth
-                    variant={med.status === 'taken' ? 'outline' : 'success'}
-                    onClick={() =>
-                      markMedicationStatus(
-                        med.id,
-                        med.status === 'taken' ? 'skipped' : 'taken'
-                      )
-                    }
-                    icon={<CheckCircle2 className="w-4 h-4" />}
-                  >
-                    {med.status === 'taken' ? 'Undo Taken' : 'Mark as Taken'}
-                  </Button>
-
-                  {med.status !== 'skipped' && med.status !== 'taken' && (
+                  {med.status === 'taken' ? (
                     <Button
                       size="sm"
-                      variant="ghost"
-                      onClick={() => markMedicationStatus(med.id, 'skipped')}
-                      icon={<XCircle className="w-4 h-4 text-[#766C82]" />}
+                      fullWidth
+                      variant="outline"
+                      onClick={() => markMedicationStatus(med.id, 'pending')}
+                      icon={<CheckCircle2 className="w-4 h-4 text-[#36866A]" />}
                     >
-                      Skip
+                      Undo Taken (Reset to Pending)
                     </Button>
+                  ) : med.status === 'skipped' ? (
+                    <div className="flex items-center gap-2 w-full">
+                      <Button
+                        size="sm"
+                        fullWidth
+                        variant="success"
+                        onClick={() => markMedicationStatus(med.id, 'taken')}
+                        icon={<CheckCircle2 className="w-4 h-4" />}
+                      >
+                        Mark as Taken
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => markMedicationStatus(med.id, 'pending')}
+                      >
+                        Undo Skip
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 w-full">
+                      <Button
+                        size="sm"
+                        fullWidth
+                        variant="success"
+                        onClick={() => markMedicationStatus(med.id, 'taken')}
+                        icon={<CheckCircle2 className="w-4 h-4" />}
+                      >
+                        Mark as Taken
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => markMedicationStatus(med.id, 'skipped')}
+                        icon={<XCircle className="w-4 h-4 text-[#766C82]" />}
+                      >
+                        Skip
+                      </Button>
+                    </div>
                   )}
                 </div>
               </Card>

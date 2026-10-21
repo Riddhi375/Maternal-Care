@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 export const AppointmentsPage: React.FC = () => {
-  const { appointments, addAppointment, updateAppointment, cancelAppointment } = useApp();
+  const { appointments, addAppointment, updateAppointment, cancelAppointment, completeAppointment } = useApp();
 
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -254,7 +254,15 @@ export const AppointmentsPage: React.FC = () => {
                       )}
                     </button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => completeAppointment(apt.id)}
+                        className="px-2 py-1 rounded-lg bg-[#EAF5F1] hover:bg-[#B6E2D3] text-[#24634E] text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Mark check-up as completed"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#36866A]" />
+                        <span>Complete</span>
+                      </button>
                       <button
                         onClick={() => openEditModal(apt)}
                         className="p-1.5 rounded-lg text-[#8B5FBF] hover:bg-[#EDE3F7] transition-colors"

@@ -20,6 +20,8 @@ import {
   initialContacts,
   initialAshaWorker,
   translations,
+  timeSeries24h,
+  MetricDataPoint,
 } from '../data/mockData';
 
 export interface ToastMessage {
@@ -41,6 +43,7 @@ interface AppContextType {
   sosActive: boolean;
   sosEventTime: string | null;
   toasts: ToastMessage[];
+  chartData24h: MetricDataPoint[];
 
   // Auth
   login: (phone: string) => void;
@@ -55,12 +58,13 @@ interface AppContextType {
   addAppointment: (appointment: Omit<Appointment, 'id'>) => void;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
   cancelAppointment: (id: string) => void;
+  completeAppointment: (id: string) => void;
 
   // Medications
   addMedication: (med: Omit<Medication, 'id'>) => void;
   updateMedication: (id: string, updates: Partial<Medication>) => void;
   deleteMedication: (id: string) => void;
-  markMedicationStatus: (id: string, status: 'taken' | 'skipped') => void;
+  markMedicationStatus: (id: string, status: 'taken' | 'skipped' | 'pending') => void;
 
   // Alerts
   acknowledgeAlert: (id: string) => void;
@@ -116,6 +120,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [sosActive, setSosActive] = useState<boolean>(saved?.sosActive || false);
   const [sosEventTime, setSosEventTime] = useState<string | null>(saved?.sosEventTime || null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [chartData24h, setChartData24h] = useState<MetricDataPoint[]>(saved?.chartData24h || timeSeries24h);
 
   // Persist state
   useEffect(() => {
@@ -132,12 +137,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAuthenticated,
         sosActive,
         sosEventTime,
+        chartData24h,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     } catch (e) {
       console.error('Failed to save to localStorage:', e);
     }
-  }, [patient, readings, appointments, medications, medicationLogs, alerts, contacts, ashaWorker, isAuthenticated, sosActive, sosEventTime]);
+  }, [patient, readings, appointments, medications, medicationLogs, alerts, contacts, ashaWorker, isAuthenticated, sosActive, sosEventTime, chartData24h]);
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
@@ -184,6 +190,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setReadings((prev) => [newReading, ...prev]);
     setPatient((prev) => ({ ...prev, lastSyncTime: 'Just now' }));
+
+    // Append to 24-hour chart trend
+    const nowHour = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    const lastPt = chartData24h[chartData24h.length - 1] || timeSeries24h[timeSeries24h.length - 1];
+    const newChartPoint: MetricDataPoint = {
+      time: nowHour,
+      heartRate: reading.type === 'heartRate' ? Number(reading.value) : lastPt.heartRate,
+      spo2: reading.type === 'spo2' ? Number(reading.value) : lastPt.spo2,
+      temperature: reading.type === 'temperature' ? Number(reading.value) : lastPt.temperature,
+      systolic: reading.systolic ?? (reading.type === 'bloodPressure' ? Number(String(reading.value).split('/')[0]) : lastPt.systolic),
+      diastolic: reading.diastolic ?? (reading.type === 'bloodPressure' ? Number(String(reading.value).split('/')[1]) : lastPt.diastolic),
+      movement: reading.type === 'movement' ? Number(reading.value) : lastPt.movement,
+      status: 'Logged',
+    };
+    setChartData24h((prev) => [...prev, newChartPoint]);
+
     addToast(`Recorded ${reading.type} reading: ${reading.value} ${reading.unit}`, 'success');
   };
 
@@ -210,6 +232,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Appointment cancelled successfully', 'info');
   };
 
+  const completeAppointment = (id: string) => {
+    setAppointments((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: 'completed' } : a))
+    );
+    addToast('Marked check-up as completed', 'success');
+  };
+
   // Medications
   const addMedication = (med: Omit<Medication, 'id'>) => {
     const newMed: Medication = {
@@ -230,7 +259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Medication reminder removed', 'info');
   };
 
-  const markMedicationStatus = (id: string, status: 'taken' | 'skipped') => {
+  const markMedicationStatus = (id: string, status: 'taken' | 'skipped' | 'pending') => {
     const med = medications.find((m) => m.id === id);
     if (!med) return;
 
@@ -249,25 +278,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
     );
 
-    // Add to logs
-    const newLog: MedicationLog = {
-      id: 'log-' + Date.now(),
-      medicationId: med.id,
-      medicationName: med.name,
-      dosage: med.dosage,
-      scheduledTime: med.scheduledTime,
-      status,
-      actionTime: nowTime,
-      date: todayStr,
-    };
-    setMedicationLogs((prev) => [newLog, ...prev]);
+    if (status === 'pending') {
+      // Revert/remove recent dose log for this medication today
+      setMedicationLogs((prev) => prev.filter((l) => !(l.medicationId === med.id && l.date === todayStr)));
+      addToast(`Reverted ${med.name} to pending`, 'info');
+    } else {
+      // Add to logs
+      const newLog: MedicationLog = {
+        id: 'log-' + Date.now(),
+        medicationId: med.id,
+        medicationName: med.name,
+        dosage: med.dosage,
+        scheduledTime: med.scheduledTime,
+        status,
+        actionTime: nowTime,
+        date: todayStr,
+      };
+      setMedicationLogs((prev) => [newLog, ...prev]);
 
-    addToast(
-      status === 'taken'
-        ? `Marked ${med.name} as taken at ${nowTime}`
-        : `Marked ${med.name} as skipped`,
-      status === 'taken' ? 'success' : 'warning'
-    );
+      addToast(
+        status === 'taken'
+          ? `Marked ${med.name} as taken at ${nowTime}`
+          : `Marked ${med.name} as skipped`,
+        status === 'taken' ? 'success' : 'warning'
+      );
+    }
   };
 
   // Alerts
@@ -391,6 +426,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sosActive,
         sosEventTime,
         toasts,
+        chartData24h,
         login,
         register,
         logout,
@@ -399,6 +435,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addAppointment,
         updateAppointment,
         cancelAppointment,
+        completeAppointment,
         addMedication,
         updateMedication,
         deleteMedication,

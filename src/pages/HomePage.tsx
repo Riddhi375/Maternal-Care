@@ -381,7 +381,7 @@ export const HomePage: React.FC = () => {
                     onClick={() =>
                       markMedicationStatus(
                         med.id,
-                        med.status === 'taken' ? 'skipped' : 'taken'
+                        med.status === 'taken' ? 'pending' : 'taken'
                       )
                     }
                     className="cursor-pointer text-[#8B5FBF] hover:scale-110 transition-transform"

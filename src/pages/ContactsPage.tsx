@@ -30,6 +30,7 @@ export const ContactsPage: React.FC = () => {
   const [editingContact, setEditingContact] = useState<TrustedContact | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [testSmsModal, setTestSmsModal] = useState<TrustedContact | null>(null);
+  const [callingContact, setCallingContact] = useState<TrustedContact | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -213,13 +214,13 @@ export const ContactsPage: React.FC = () => {
                       <span>Test Alert</span>
                     </button>
 
-                    <a
-                      href={`tel:${contact.phone.replace(/\s+/g, '')}`}
-                      className="px-2.5 py-1 rounded-xl bg-[#EDE3F7] hover:bg-[#DCBEEF] text-[#503477] font-bold text-xs flex items-center gap-1"
+                    <button
+                      onClick={() => setCallingContact(contact)}
+                      className="px-2.5 py-1 rounded-xl bg-[#EDE3F7] hover:bg-[#DCBEEF] text-[#503477] font-bold text-xs flex items-center gap-1 cursor-pointer"
                     >
                       <Phone className="w-3 h-3" />
                       <span>Call</span>
-                    </a>
+                    </button>
                   </div>
                 </div>
               </Card>
@@ -354,6 +355,43 @@ export const ContactsPage: React.FC = () => {
             </div>
             <p className="text-[11px] text-[#766C82]">
               Note: This is a demonstration simulator. No real SMS carrier fee is incurred.
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {/* Simulated Call Modal */}
+      {callingContact && (
+        <Modal
+          isOpen={Boolean(callingContact)}
+          onClose={() => setCallingContact(null)}
+          title={`Call ${callingContact.name}`}
+          description={`Relationship: ${callingContact.relationship} • Phone: ${callingContact.phone}`}
+          footer={
+            <div className="w-full flex items-center justify-between gap-2">
+              <Button variant="outline" size="sm" onClick={() => setCallingContact(null)}>
+                Close
+              </Button>
+              <a
+                href={`tel:${callingContact.phone.replace(/\s+/g, '')}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#36866A] text-white text-xs font-bold shadow-soft"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Launch Device Dialer</span>
+              </a>
+            </div>
+          }
+        >
+          <div className="p-4 bg-[#FAF6FE] rounded-2xl border border-[#EDE3F7] text-center space-y-3">
+            <div className="w-14 h-14 rounded-full bg-[#EAF5F1] text-[#36866A] flex items-center justify-center mx-auto animate-pulse">
+              <Phone className="w-7 h-7" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-[#29213A]">{callingContact.name}</p>
+              <p className="text-xs text-[#766C82]">{callingContact.relationship} • {callingContact.phone}</p>
+            </div>
+            <p className="text-[11px] text-[#766C82] bg-white p-2.5 rounded-xl border border-[#EDE3F7]">
+              Simulating direct connection to your trusted caregiver.
             </p>
           </div>
         </Modal>

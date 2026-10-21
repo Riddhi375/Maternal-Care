@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 
 export const HealthPage: React.FC = () => {
-  const { readings, addReading, patient } = useApp();
+  const { readings, addReading, patient, chartData24h } = useApp();
 
   const [activeMetric, setActiveMetric] = useState<HealthMetricType>('heartRate');
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
@@ -37,9 +37,9 @@ export const HealthPage: React.FC = () => {
 
   // Manual Reading Form State
   const [formMetricType, setFormMetricType] = useState<HealthMetricType>('heartRate');
-  const [formValue, setFormValue] = useState('80');
-  const [formSystolic, setFormSystolic] = useState('120');
-  const [formDiastolic, setFormDiastolic] = useState('78');
+  const [formValue, setFormValue] = useState('78');
+  const [formSystolic, setFormSystolic] = useState('118');
+  const [formDiastolic, setFormDiastolic] = useState('76');
   const [formNotes, setFormNotes] = useState('');
   const [formSource, setFormSource] = useState<'Manual Log' | 'Clinic Visit'>('Manual Log');
 
@@ -47,13 +47,13 @@ export const HealthPage: React.FC = () => {
   const getChartData = () => {
     switch (timeframe) {
       case '24h':
-        return timeSeries24h;
+        return chartData24h;
       case '7d':
         return timeSeries7d;
       case '30d':
         return timeSeries30d;
       default:
-        return timeSeries24h;
+        return chartData24h;
     }
   };
 
@@ -347,7 +347,28 @@ export const HealthPage: React.FC = () => {
             label="Metric Type"
             as="select"
             value={formMetricType}
-            onChange={(e) => setFormMetricType(e.target.value as HealthMetricType)}
+            onChange={(e) => {
+              const newType = e.target.value as HealthMetricType;
+              setFormMetricType(newType);
+              switch (newType) {
+                case 'heartRate':
+                  setFormValue('78');
+                  break;
+                case 'spo2':
+                  setFormValue('98');
+                  break;
+                case 'temperature':
+                  setFormValue('98.4');
+                  break;
+                case 'movement':
+                  setFormValue('10');
+                  break;
+                case 'bloodPressure':
+                  setFormSystolic('118');
+                  setFormDiastolic('76');
+                  break;
+              }
+            }}
             options={[
               { label: 'Heart Rate (bpm)', value: 'heartRate' },
               { label: 'SpO2 Oxygen (%)', value: 'spo2' },

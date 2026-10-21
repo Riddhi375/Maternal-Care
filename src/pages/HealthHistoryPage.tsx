@@ -102,6 +102,27 @@ export const HealthHistoryPage: React.FC = () => {
     setIsExportModalOpen(false);
   };
 
+  const isWithinDateFilter = (dateOrTimestampStr: string, filter: 'all' | '7d' | '30d'): boolean => {
+    if (filter === 'all') return true;
+    const lower = (dateOrTimestampStr || '').toLowerCase();
+    if (lower.includes('today') || lower.includes('just now') || lower.includes('yesterday') || lower.includes('3 days ago')) {
+      return true;
+    }
+    const parsed = new Date(dateOrTimestampStr);
+    if (!isNaN(parsed.getTime())) {
+      const refDate = new Date('2026-10-21');
+      const diffDays = Math.abs((refDate.getTime() - parsed.getTime()) / (1000 * 60 * 60 * 24));
+      if (filter === '7d') return diffDays <= 7;
+      if (filter === '30d') return diffDays <= 30;
+    }
+    return filter === '30d';
+  };
+
+  const filteredReadings = readings.filter((r) => isWithinDateFilter(r.timestamp, dateFilter));
+  const filteredAppointments = appointments.filter((a) => isWithinDateFilter(a.date, dateFilter));
+  const filteredMedicationLogs = medicationLogs.filter((m) => isWithinDateFilter(m.date, dateFilter));
+  const filteredAlerts = alerts.filter((a) => isWithinDateFilter(a.timestamp, dateFilter));
+
   return (
     <div className="flex-1 flex flex-col">
       <Header
@@ -154,10 +175,10 @@ export const HealthHistoryPage: React.FC = () => {
           activeTab={activeTab}
           onChange={(tab) => setActiveTab(tab)}
           tabs={[
-            { id: 'readings', label: 'Vitals', badge: readings.length },
-            { id: 'appointments', label: 'Check-ups', badge: appointments.length },
-            { id: 'meds', label: 'Med Logs', badge: medicationLogs.length },
-            { id: 'alerts', label: 'Alerts', badge: alerts.length },
+            { id: 'readings', label: 'Vitals', badge: filteredReadings.length },
+            { id: 'appointments', label: 'Check-ups', badge: filteredAppointments.length },
+            { id: 'meds', label: 'Med Logs', badge: filteredMedicationLogs.length },
+            { id: 'alerts', label: 'Alerts', badge: filteredAlerts.length },
           ]}
         />
 
@@ -177,7 +198,7 @@ export const HealthHistoryPage: React.FC = () => {
                 onClick={() => setDateFilter(f.id as any)}
                 className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   dateFilter === f.id
-                    ? 'bg-[#8B5FBF] text-white'
+                    ? 'bg-[#8B5FBF] text-white shadow-soft-sm'
                     : 'bg-white text-[#766C82] border border-[#EDE3F7]'
                 }`}
               >
@@ -190,97 +211,121 @@ export const HealthHistoryPage: React.FC = () => {
         {/* Tab 1: Vitals Readings */}
         {activeTab === 'readings' && (
           <div className="space-y-2.5">
-            {readings.map((reading) => (
-              <Card key={reading.id} className="p-3.5 bg-white border-[#EDE3F7]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#EDE3F7] text-[#8B5FBF] flex items-center justify-center">
-                      <Activity className="w-4 h-4" />
+            {filteredReadings.length === 0 ? (
+              <div className="p-6 text-center text-xs text-[#766C82] bg-white rounded-2xl border border-[#EDE3F7]">
+                No vital readings recorded within the selected timeframe.
+              </div>
+            ) : (
+              filteredReadings.map((reading) => (
+                <Card key={reading.id} className="p-3.5 bg-white border-[#EDE3F7]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[#EDE3F7] text-[#8B5FBF] flex items-center justify-center">
+                        <Activity className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold text-[#29213A] uppercase tracking-wide">
+                          {reading.type}
+                        </h3>
+                        <p className="text-sm font-extrabold text-[#503477]">
+                          {reading.value} <span className="text-xs font-normal text-[#766C82]">{reading.unit}</span>
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-[#29213A] uppercase tracking-wide">
-                        {reading.type}
-                      </h3>
-                      <p className="text-sm font-extrabold text-[#503477]">
-                        {reading.value} <span className="text-xs font-normal text-[#766C82]">{reading.unit}</span>
+
+                    <div className="text-right">
+                      <Badge variant={reading.status === 'normal' ? 'normal' : 'attention'} size="sm">
+                        {reading.status === 'normal' ? 'Normal' : 'Attention'}
+                      </Badge>
+                      <p className="text-[10px] text-[#766C82] mt-1">
+                        {reading.source} • {reading.timestamp}
                       </p>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <Badge variant={reading.status === 'normal' ? 'normal' : 'attention'} size="sm">
-                      {reading.status === 'normal' ? 'Normal' : 'Attention'}
-                    </Badge>
-                    <p className="text-[10px] text-[#766C82] mt-1">
-                      {reading.source} • {reading.timestamp}
+                  {reading.notes && (
+                    <p className="text-[11px] text-[#766C82] mt-2 pt-2 border-t border-[#F6F0FC] italic">
+                      "{reading.notes}"
                     </p>
-                  </div>
-                </div>
-
-                {reading.notes && (
-                  <p className="text-[11px] text-[#766C82] mt-2 pt-2 border-t border-[#F6F0FC] italic">
-                    "{reading.notes}"
-                  </p>
-                )}
-              </Card>
-            ))}
+                  )}
+                </Card>
+              ))
+            )}
           </div>
         )}
 
         {/* Tab 2: Check-up Records */}
         {activeTab === 'appointments' && (
           <div className="space-y-2.5">
-            {appointments.map((apt) => (
-              <Card key={apt.id} className="p-3.5 bg-white border-[#EDE3F7] space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Badge variant="lavender" size="sm">{apt.type}</Badge>
-                  <Badge variant={apt.status === 'completed' ? 'success' : 'normal'} size="sm">
-                    {apt.status}
-                  </Badge>
-                </div>
-                <h3 className="text-xs font-bold text-[#29213A]">{apt.title}</h3>
-                <p className="text-[11px] text-[#766C82]">
-                  {apt.doctorName} • {apt.facility} • {apt.date} at {apt.time}
-                </p>
-              </Card>
-            ))}
+            {filteredAppointments.length === 0 ? (
+              <div className="p-6 text-center text-xs text-[#766C82] bg-white rounded-2xl border border-[#EDE3F7]">
+                No check-ups found within the selected timeframe.
+              </div>
+            ) : (
+              filteredAppointments.map((apt) => (
+                <Card key={apt.id} className="p-3.5 bg-white border-[#EDE3F7] space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="lavender" size="sm">{apt.type}</Badge>
+                    <Badge variant={apt.status === 'completed' ? 'success' : apt.status === 'upcoming' ? 'normal' : 'skipped'} size="sm">
+                      {apt.status}
+                    </Badge>
+                  </div>
+                  <h3 className="text-xs font-bold text-[#29213A]">{apt.title}</h3>
+                  <p className="text-[11px] text-[#766C82]">
+                    {apt.doctorName} • {apt.facility} • {apt.date} at {apt.time}
+                  </p>
+                </Card>
+              ))
+            )}
           </div>
         )}
 
         {/* Tab 3: Medication Logs */}
         {activeTab === 'meds' && (
           <div className="space-y-2.5">
-            {medicationLogs.map((log) => (
-              <Card key={log.id} className="p-3 bg-white border-[#EDE3F7] flex items-center justify-between text-xs">
-                <div>
-                  <h3 className="font-bold text-[#29213A]">{log.medicationName}</h3>
-                  <p className="text-[10px] text-[#766C82]">
-                    {log.dosage} • {log.date} at {log.actionTime}
-                  </p>
-                </div>
-                <Badge variant={log.status === 'taken' ? 'taken' : 'skipped'} size="sm">
-                  {log.status === 'taken' ? 'Taken' : 'Skipped'}
-                </Badge>
-              </Card>
-            ))}
+            {filteredMedicationLogs.length === 0 ? (
+              <div className="p-6 text-center text-xs text-[#766C82] bg-white rounded-2xl border border-[#EDE3F7]">
+                No medication logs recorded within the selected timeframe.
+              </div>
+            ) : (
+              filteredMedicationLogs.map((log) => (
+                <Card key={log.id} className="p-3 bg-white border-[#EDE3F7] flex items-center justify-between text-xs">
+                  <div>
+                    <h3 className="font-bold text-[#29213A]">{log.medicationName}</h3>
+                    <p className="text-[10px] text-[#766C82]">
+                      {log.dosage} • {log.date} at {log.actionTime}
+                    </p>
+                  </div>
+                  <Badge variant={log.status === 'taken' ? 'taken' : 'skipped'} size="sm">
+                    {log.status === 'taken' ? 'Taken' : 'Skipped'}
+                  </Badge>
+                </Card>
+              ))
+            )}
           </div>
         )}
 
         {/* Tab 4: Alerts */}
         {activeTab === 'alerts' && (
           <div className="space-y-2.5">
-            {alerts.map((al) => (
-              <Card key={al.id} className="p-3 bg-white border-[#EDE3F7] space-y-1 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#29213A]">{al.title}</span>
-                  <Badge variant={al.status === 'resolved' ? 'success' : 'attention'} size="sm">
-                    {al.status}
-                  </Badge>
-                </div>
-                <p className="text-[11px] text-[#766C82]">{al.description}</p>
-                <p className="text-[10px] text-[#8B5FBF] pt-1">{al.timestamp}</p>
-              </Card>
-            ))}
+            {filteredAlerts.length === 0 ? (
+              <div className="p-6 text-center text-xs text-[#766C82] bg-white rounded-2xl border border-[#EDE3F7]">
+                No alerts logged within the selected timeframe.
+              </div>
+            ) : (
+              filteredAlerts.map((al) => (
+                <Card key={al.id} className="p-3 bg-white border-[#EDE3F7] space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#29213A]">{al.title}</span>
+                    <Badge variant={al.status === 'resolved' ? 'success' : 'attention'} size="sm">
+                      {al.status}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-[#766C82]">{al.description}</p>
+                  <p className="text-[10px] text-[#8B5FBF] pt-1">{al.timestamp}</p>
+                </Card>
+              ))
+            )}
           </div>
         )}
       </div>
