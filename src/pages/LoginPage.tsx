@@ -6,7 +6,20 @@ import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { FormField } from '../components/common/FormField';
 import { DisclaimerBanner } from '../components/common/DisclaimerBanner';
-import { Phone, Lock, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
+import { 
+  Phone, 
+  Lock, 
+  Sparkles, 
+  CheckCircle2, 
+  ArrowRight,
+  Baby,
+  HeartHandshake,
+  ShieldCheck,
+  Stethoscope,
+  ChevronRight
+} from 'lucide-react';
+import { UserRole } from '../types';
+import { DEMO_ACCOUNTS } from '../data/mockData';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,20 +54,30 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      login(phone);
+      login(phone, 'pregnant_woman');
       navigate('/home');
     }, 500);
   };
 
-  const handleQuickDemoLogin = () => {
-    login('+91 98765 43210');
-    navigate('/home');
+  const handleQuickRoleLogin = (role: UserRole) => {
+    const acc = DEMO_ACCOUNTS.find((a) => a.role === role);
+    login(acc?.phone || phone, role);
+
+    if (role === 'asha') {
+      navigate('/asha-dashboard');
+    } else if (role === 'doctor') {
+      navigate('/doctor-dashboard');
+    } else if (role === 'family') {
+      navigate('/family-dashboard');
+    } else {
+      navigate('/home');
+    }
   };
 
   return (
     <div className="flex-1 flex flex-col justify-between p-4 sm:p-6 min-h-screen">
       <div>
-        <Header title="Patient Sign In" showBack backTo="/" />
+        <Header title="Sign In & Role Selection" showBack backTo="/" />
 
         <div className="pt-4 space-y-5">
           <div className="text-center space-y-1">
@@ -62,39 +85,103 @@ export const LoginPage: React.FC = () => {
               Welcome Back to MatriCare
             </h1>
             <p className="text-xs sm:text-sm text-[#766C82]">
-              Access your maternal health records and pregnancy journey.
+              Select a demo role account or sign in with your mobile OTP.
             </p>
           </div>
 
           <DisclaimerBanner />
 
-          {/* Quick Demo Login Hero Card */}
-          <Card variant="highlight" className="p-4 border-[#8B5FBF]/30">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#8B5FBF] text-white flex items-center justify-center flex-shrink-0 shadow-soft-sm">
-                <Sparkles className="w-5 h-5 text-[#F7DCE8]" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-sm font-bold text-[#503477]">
-                  Instant Demo Access
-                </h2>
-                <p className="text-xs text-[#766C82] mt-0.5 leading-relaxed">
-                  Sign in immediately with the pre-populated profile for <strong>Ananya Sharma (Week 24)</strong>.
-                </p>
-                <div className="mt-3">
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={handleQuickDemoLogin}
-                    icon={<ArrowRight className="w-4 h-4" />}
-                    iconPosition="right"
-                  >
-                    Enter Demo App as Ananya
-                  </Button>
-                </div>
-              </div>
+          {/* Quick Demo Login Grid for 4 Roles */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#8B5FBF] uppercase tracking-wide">
+                1-Click Demo Accounts (All 4 RBAC Roles)
+              </span>
+              <span className="text-[10px] text-[#766C82]">Instant Login</span>
             </div>
-          </Card>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* 1. Mother */}
+              <button
+                onClick={() => handleQuickRoleLogin('pregnant_woman')}
+                className="p-3.5 rounded-2xl bg-white border border-[#EDE3F7] shadow-soft-sm hover:border-[#8B5FBF] text-left transition-all flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#EDE3F7] text-[#8B5FBF] flex items-center justify-center font-bold">
+                    <Baby className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-[#8B5FBF] block uppercase">
+                      Pregnant Woman
+                    </span>
+                    <strong className="text-xs text-[#29213A]">Ananya Sharma</strong>
+                    <span className="text-[10px] text-[#766C82] block">Week 24 Gestation</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#766C82]" />
+              </button>
+
+              {/* 2. Family */}
+              <button
+                onClick={() => handleQuickRoleLogin('family')}
+                className="p-3.5 rounded-2xl bg-white border border-[#EDE3F7] shadow-soft-sm hover:border-[#8B5FBF] text-left transition-all flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#FAF6FE] text-[#503477] border border-[#DCBEEF] flex items-center justify-center font-bold">
+                    <HeartHandshake className="w-5 h-5 text-[#8B5FBF]" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-[#503477] block uppercase">
+                      Family Member
+                    </span>
+                    <strong className="text-xs text-[#29213A]">Rohan Sharma</strong>
+                    <span className="text-[10px] text-[#766C82] block">Husband (Emergency Contact)</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#766C82]" />
+              </button>
+
+              {/* 3. ASHA */}
+              <button
+                onClick={() => handleQuickRoleLogin('asha')}
+                className="p-3.5 rounded-2xl bg-white border border-[#EDE3F7] shadow-soft-sm hover:border-[#8B5FBF] text-left transition-all flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#EAF5F1] text-[#36866A] flex items-center justify-center font-bold">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-[#36866A] block uppercase">
+                      ASHA / ANM Worker
+                    </span>
+                    <strong className="text-xs text-[#29213A]">Sunita Devi</strong>
+                    <span className="text-[10px] text-[#766C82] block">Sub-Centre Rampur Kalan</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#766C82]" />
+              </button>
+
+              {/* 4. Doctor */}
+              <button
+                onClick={() => handleQuickRoleLogin('doctor')}
+                className="p-3.5 rounded-2xl bg-white border border-[#EDE3F7] shadow-soft-sm hover:border-[#8B5FBF] text-left transition-all flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#F7DCE8] text-[#D95783] flex items-center justify-center font-bold">
+                    <Stethoscope className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-[#D95783] block uppercase">
+                      Doctor / PHC Staff
+                    </span>
+                    <strong className="text-xs text-[#29213A]">Dr. Meera Nambiar</strong>
+                    <span className="text-[10px] text-[#766C82] block">District Women's Hospital</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#766C82]" />
+              </button>
+            </div>
+          </div>
 
           {/* Form: Mobile Number & Simulated OTP */}
           <Card className="space-y-4">
@@ -149,37 +236,25 @@ export const LoginPage: React.FC = () => {
                 </div>
 
                 <FormField
-                  label="6-Digit Verification Code (Simulated OTP)"
+                  label="Enter 6-Digit OTP"
                   type="text"
-                  placeholder="e.g. 123456"
-                  maxLength={6}
+                  placeholder="1 2 3 4 5 6"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   error={error}
                   icon={<Lock className="w-4 h-4" />}
-                  helperText="Demo simulation: Enter 123456 or tap Auto-fill below."
+                  helperText="Demo Code: Enter 123456 or any 4+ digits to proceed."
                   required
                 />
-
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setOtp('123456')}
-                    className="text-xs"
-                  >
-                    Auto-fill (123456)
-                  </Button>
-                </div>
 
                 <Button
                   type="submit"
                   fullWidth
                   isLoading={isLoading}
                   icon={<CheckCircle2 className="w-4 h-4" />}
+                  iconPosition="right"
                 >
-                  Verify & Enter MatriCare
+                  Verify & Open Dashboard
                 </Button>
               </form>
             )}
@@ -187,15 +262,16 @@ export const LoginPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Footer Register Link */}
-      <div className="pt-6 pb-2 text-center text-xs text-[#766C82]">
-        <span>New to MatriCare? </span>
-        <button
-          onClick={() => navigate('/register')}
-          className="text-[#8B5FBF] hover:text-[#503477] font-bold underline underline-offset-2 ml-1 cursor-pointer"
-        >
-          Create Patient Profile
-        </button>
+      <div className="text-center pt-6 pb-2">
+        <p className="text-xs text-[#766C82]">
+          Need to register a new pregnancy profile?{' '}
+          <button
+            onClick={() => navigate('/register')}
+            className="text-[#8B5FBF] font-bold hover:underline cursor-pointer"
+          >
+            Create New Patient Account
+          </button>
+        </p>
       </div>
     </div>
   );

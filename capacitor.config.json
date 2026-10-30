@@ -1,0 +1,8 @@
+{
+  "appId": "com.matricare.app",
+  "appName": "MatriCare",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#F6F0FC"
+  }
+}

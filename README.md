@@ -30,3 +30,17 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Building the Android APK (Capacitor)
+
+**Option A – GitHub Actions (no Android Studio needed):** push this repo to GitHub, open the *Actions* tab → *Build Android APK* → download `MatriCare-debug-apk` from the run's artifacts.
+
+**Option B – locally:** install Android Studio (JDK 21 + SDK), then:
+
+```bash
+npm install
+npm run android:apk      # output: android/app/build/outputs/apk/debug/app-debug.apk
+# or: npm run android:sync && npm run android:open   (build/run from Android Studio)
+```
+
+After changing any web code, run `npm run android:sync` again before rebuilding.

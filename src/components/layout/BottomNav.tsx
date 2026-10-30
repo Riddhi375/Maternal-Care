@@ -1,41 +1,64 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { Home, HeartPulse, Sparkles, Bell, User } from 'lucide-react';
+import { 
+  Home, 
+  HeartPulse, 
+  Sparkles, 
+  Bell, 
+  User, 
+  Users, 
+  HeartHandshake, 
+  Stethoscope, 
+  BookOpen, 
+  Building2,
+  FileText
+} from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
-  const { alerts, t } = useApp();
+  const { alerts, t, currentUserRole } = useApp();
 
   const attentionAlerts = alerts.filter((a) => a.status === 'attention').length;
 
-  const navItems = [
-    {
-      to: '/home',
-      label: t('home'),
-      icon: Home,
-    },
-    {
-      to: '/health',
-      label: t('health'),
-      icon: HeartPulse,
-    },
-    {
-      to: '/pregnancy',
-      label: t('pregnancy'),
-      icon: Sparkles,
-    },
-    {
-      to: '/alerts',
-      label: t('alerts'),
-      icon: Bell,
-      badge: attentionAlerts > 0 ? attentionAlerts : undefined,
-    },
-    {
-      to: '/profile',
-      label: t('profile'),
-      icon: User,
-    },
-  ];
+  const getNavItems = () => {
+    switch (currentUserRole) {
+      case 'asha':
+        return [
+          { to: '/asha-dashboard', label: 'Priority Queue', icon: Users },
+          { to: '/health', label: 'Vitals', icon: HeartPulse },
+          { to: '/history', label: '9-Mo History', icon: FileText },
+          { to: '/alerts', label: 'Alerts', icon: Bell, badge: attentionAlerts > 0 ? attentionAlerts : undefined },
+          { to: '/profile', label: 'Profile', icon: User },
+        ];
+      case 'doctor':
+        return [
+          { to: '/doctor-dashboard', label: 'Doctor Portal', icon: Stethoscope },
+          { to: '/history', label: 'Longitudinal', icon: FileText },
+          { to: '/hospital-referral', label: 'Referrals', icon: Building2 },
+          { to: '/alerts', label: 'Alerts', icon: Bell, badge: attentionAlerts > 0 ? attentionAlerts : undefined },
+          { to: '/profile', label: 'Profile', icon: User },
+        ];
+      case 'family':
+        return [
+          { to: '/family-dashboard', label: 'Family View', icon: HeartHandshake },
+          { to: '/health', label: 'Her Vitals', icon: HeartPulse },
+          { to: '/contacts', label: 'Care Circle', icon: Users },
+          { to: '/alerts', label: 'Alerts', icon: Bell, badge: attentionAlerts > 0 ? attentionAlerts : undefined },
+          { to: '/profile', label: 'Profile', icon: User },
+        ];
+      default:
+        // Pregnant Woman
+        return [
+          { to: '/home', label: t('home'), icon: Home },
+          { to: '/health', label: t('health'), icon: HeartPulse },
+          { to: '/guidance', label: 'Coach & Diet', icon: BookOpen },
+          { to: '/alerts', label: t('alerts'), icon: Bell, badge: attentionAlerts > 0 ? attentionAlerts : undefined },
+          { to: '/profile', label: t('profile'), icon: User },
+        ];
+    }
+  };
+
+  const navItems = getNavItems();
 
   return (
     <nav
@@ -43,7 +66,7 @@ export const BottomNav: React.FC = () => {
       aria-label="Bottom Navigation"
     >
       <div className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl pointer-events-auto">
-        <div className="glass-nav px-3 py-2 sm:px-6 flex items-center justify-around rounded-t-3xl shadow-lg border-t border-[#DCBEEF]/50">
+        <div className="glass-nav px-2 py-2 sm:px-6 flex items-center justify-around rounded-t-3xl shadow-lg border-t border-[#DCBEEF]/50">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -51,7 +74,7 @@ export const BottomNav: React.FC = () => {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) => `
-                  relative flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 select-none cursor-pointer
+                  relative flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-200 select-none cursor-pointer
                   ${
                     isActive
                       ? 'text-[#8B5FBF] font-bold'
@@ -75,7 +98,7 @@ export const BottomNav: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <span className="text-[11px] mt-1 tracking-tight">
+                    <span className="text-[10px] mt-1 tracking-tight truncate max-w-[64px] text-center">
                       {item.label}
                     </span>
                     {isActive && (

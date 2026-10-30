@@ -28,6 +28,7 @@ export const initialPatient: PatientProfile = {
   notificationsEnabled: true,
   smsAlertsEnabled: true,
   emergencySharingEnabled: true,
+  locationSharingEnabled: true,
   city: 'Lucknow',
   state: 'Uttar Pradesh',
 };
@@ -680,3 +681,222 @@ export const translations: Record<string, Record<string, string>> = {
     sampleNotice: 'डेमो डेटा — केवळ जनजागृतीसाठी',
   },
 };
+
+export interface DemoPatientSummary {
+  id: string;
+  name: string;
+  age: number;
+  pregnancyWeek: number;
+  trimester: 1 | 2 | 3;
+  riskCategory: 'Possible Emergency' | 'Warning' | 'Normal';
+  priorityOrder: number;
+  latestVitals: {
+    heartRate: number;
+    spo2: number;
+    bp: string;
+    temperature: number;
+    movement: string;
+  };
+  latestAlertReason?: string;
+  missedMedicinesCount: number;
+  missedCheckupsCount: number;
+  assignedAshaName: string;
+  assignedDoctorName: string;
+  phone: string;
+  address: string;
+  emergencyContact: {
+    name: string;
+    relation: string;
+    phone: string;
+  };
+}
+
+export const DEMO_ACCOUNTS = [
+  {
+    id: 'user-mother-1',
+    role: 'pregnant_woman' as const,
+    name: 'Ananya Sharma',
+    phone: '+91 98765 43210',
+    designation: 'Gestational Mother (Week 24)',
+    associatedPatientId: 'PAT-8921-IN',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'user-family-1',
+    role: 'family' as const,
+    name: 'Rohan Sharma',
+    phone: '+91 98200 11223',
+    designation: 'Husband & Primary Emergency Contact',
+    associatedPatientId: 'PAT-8921-IN',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'user-asha-1',
+    role: 'asha' as const,
+    name: 'Sunita Devi',
+    phone: '+91 94150 12345',
+    designation: 'ASHA Facilitator (ID: AS-UP-2490)',
+    associatedPatientId: 'PAT-8921-IN',
+    avatar: 'https://images.unsplash.com/photo-1594824813587-0b1ef38bb208?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'user-doctor-1',
+    role: 'doctor' as const,
+    name: 'Dr. Meera Nambiar',
+    phone: '+91 94155 00112',
+    designation: 'Obstetrician & Gynecologist (MD, DGO)',
+    associatedPatientId: 'PAT-8921-IN',
+    avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&auto=format&fit=crop&q=80',
+  },
+];
+
+export const MULTI_PATIENT_ROSTER: DemoPatientSummary[] = [
+  {
+    id: 'pat-1',
+    name: 'Sunita Rawat',
+    age: 26,
+    pregnancyWeek: 32,
+    trimester: 3,
+    riskCategory: 'Possible Emergency',
+    priorityOrder: 1,
+    latestVitals: {
+      heartRate: 118,
+      spo2: 92,
+      bp: '158/98',
+      temperature: 99.2,
+      movement: 'Stillness flagged post-fall',
+    },
+    latestAlertReason: 'Possible fall detected · 30s check-in timed out without response · Verify immediately',
+    missedMedicinesCount: 2,
+    missedCheckupsCount: 1,
+    assignedAshaName: 'Sunita Devi',
+    assignedDoctorName: 'Dr. Meera Nambiar',
+    phone: '+91 98112 33445',
+    address: 'House 18, Gali 2, Rampur Kalan, Sadar',
+    emergencyContact: {
+      name: 'Manoj Rawat',
+      relation: 'Husband',
+      phone: '+91 98112 33440',
+    },
+  },
+  {
+    id: 'pat-2',
+    name: 'Neha Verma',
+    age: 23,
+    pregnancyWeek: 26,
+    trimester: 2,
+    riskCategory: 'Warning',
+    priorityOrder: 2,
+    latestVitals: {
+      heartRate: 108,
+      spo2: 96,
+      bp: '138/88',
+      temperature: 98.6,
+      movement: 'Normal movements',
+    },
+    latestAlertReason: 'Abnormal resting heart rate trend sustained above 105 bpm over 3 checks',
+    missedMedicinesCount: 1,
+    missedCheckupsCount: 0,
+    assignedAshaName: 'Sunita Devi',
+    assignedDoctorName: 'Dr. Meera Nambiar',
+    phone: '+91 97114 55667',
+    address: 'Near Shiv Mandir, Ward 4, Bakshi Ka Talab',
+    emergencyContact: {
+      name: 'Vikas Verma',
+      relation: 'Husband',
+      phone: '+91 97114 55660',
+    },
+  },
+  {
+    id: 'PAT-8921-IN',
+    name: 'Ananya Sharma',
+    age: 28,
+    pregnancyWeek: 24,
+    trimester: 2,
+    riskCategory: 'Normal',
+    priorityOrder: 3,
+    latestVitals: {
+      heartRate: 78,
+      spo2: 98,
+      bp: '118/76',
+      temperature: 98.4,
+      movement: '10 kicks / 2 hrs',
+    },
+    latestAlertReason: 'All monitored vitals and activity within standard physiological targets',
+    missedMedicinesCount: 0,
+    missedCheckupsCount: 0,
+    assignedAshaName: 'Sunita Devi',
+    assignedDoctorName: 'Dr. Meera Nambiar',
+    phone: '+91 98765 43210',
+    address: 'House #42, Ward 3, Rampur Kalan, Sadar Block, Lucknow',
+    emergencyContact: {
+      name: 'Rohan Sharma',
+      relation: 'Husband',
+      phone: '+91 98200 11223',
+    },
+  },
+  {
+    id: 'pat-4',
+    name: 'Rani Kumari',
+    age: 21,
+    pregnancyWeek: 20,
+    trimester: 2,
+    riskCategory: 'Normal',
+    priorityOrder: 4,
+    latestVitals: {
+      heartRate: 76,
+      spo2: 99,
+      bp: '114/72',
+      temperature: 98.2,
+      movement: 'Normal fluttering',
+    },
+    latestAlertReason: 'ANC Growth Scan completed yesterday · All normal',
+    missedMedicinesCount: 0,
+    missedCheckupsCount: 0,
+    assignedAshaName: 'Sunita Devi',
+    assignedDoctorName: 'Dr. Meera Nambiar',
+    phone: '+91 94156 77889',
+    address: 'Post Office Road, Rampur Sub-Centre',
+    emergencyContact: {
+      name: 'Ajay Kumar',
+      relation: 'Husband',
+      phone: '+91 94156 77880',
+    },
+  },
+];
+
+export const INITIAL_ASHA_FOLLOWUPS = [
+  {
+    id: 'fol-1',
+    patientId: 'pat-1',
+    patientName: 'Sunita Rawat',
+    type: 'fall_check' as const,
+    title: 'Urgent Home Check-in: Unconfirmed Fall Detection',
+    description: 'MPU6050 sensor triggered fall event at 04:32 PM. In-person visit required to confirm maternal and fetal wellbeing.',
+    status: 'pending' as const,
+    createdDate: '2026-10-30',
+    notes: 'Calling family first; dispatching sub-centre ASHA bicycle.',
+  },
+  {
+    id: 'fol-2',
+    patientId: 'PAT-8921-IN',
+    patientName: 'Ananya Sharma',
+    type: 'missed_medicine' as const,
+    title: 'Medication Review: Evening Calcium Tablet Pending',
+    description: 'Scheduled evening calcium tablet was not logged. Review supply at upcoming home check-in.',
+    status: 'in_progress' as const,
+    createdDate: '2026-10-29',
+    notes: 'Patient advised to take after dinner with warm water.',
+  },
+  {
+    id: 'fol-3',
+    patientId: 'pat-2',
+    patientName: 'Neha Verma',
+    type: 'abnormal_vital' as const,
+    title: 'Blood Pressure & Heart Rate Re-assessment',
+    description: 'Elevated resting pulse and borderline 138/88 BP. Perform manual sphygmomanometer check.',
+    status: 'pending' as const,
+    createdDate: '2026-10-30',
+  },
+];
+

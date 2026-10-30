@@ -32,7 +32,10 @@ export const EmergencyPage: React.FC = () => {
     cancelSOS, 
     contacts, 
     ashaWorker, 
-    patient 
+    patient,
+    location,
+    refreshLocation,
+    toggleLocationSharing
   } = useApp();
 
   const [activeCallModal, setActiveCallModal] = useState<{
@@ -135,6 +138,55 @@ export const EmergencyPage: React.FC = () => {
             )}
           </div>
         </Card>
+
+        {/* Module 1G: Location in Alert (Planned in PDF) */}
+        <div className="p-4 rounded-3xl bg-white border border-[#EDE3F7] shadow-soft-sm space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#29213A]">
+              <MapPin className="w-4 h-4 text-[#8B5FBF]" />
+              <span>Emergency GPS Location Sharing</span>
+            </div>
+            <button
+              onClick={toggleLocationSharing}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition-all ${
+                patient.locationSharingEnabled
+                  ? 'bg-[#EAF5F1] text-[#36866A] border border-[#B6E2D3]'
+                  : 'bg-[#F6F0FC] text-[#766C82]'
+              }`}
+            >
+              {patient.locationSharingEnabled ? 'Sharing Enabled ✓' : 'Sharing Disabled'}
+            </button>
+          </div>
+
+          <div className="p-3 bg-[#FAF6FE] rounded-2xl border border-[#DCBEEF] space-y-1 text-xs">
+            <p className="font-semibold text-[#503477]">
+              Current Dispatch Location:
+            </p>
+            <p className="text-[11px] text-[#766C82] leading-relaxed">
+              {location.address}
+            </p>
+            <div className="flex items-center justify-between pt-1 text-[10px] text-[#8B5FBF]">
+              <span>
+                Coordinates: {location.latitude}° N, {location.longitude}° E (±{location.accuracyMeters}m)
+              </span>
+              <span className="font-bold">
+                {location.isSimulated ? '(Simulated Location)' : '(Live Device GPS)'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs pt-0.5">
+            <span className="text-[10px] text-[#766C82]">
+              Shared automatically with 108 ambulance and ASHA in emergency events.
+            </span>
+            <button
+              onClick={refreshLocation}
+              className="text-[#8B5FBF] hover:underline font-bold text-[11px] flex items-center gap-0.5 cursor-pointer flex-shrink-0"
+            >
+              <span>Refresh GPS</span>
+            </button>
+          </div>
+        </div>
 
         {/* Emergency Hotlines Directory */}
         <div className="space-y-2">

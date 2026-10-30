@@ -11,7 +11,6 @@ import { DisclaimerBanner } from '../components/common/DisclaimerBanner';
 import { 
   FileText, 
   Download, 
-  Printer, 
   Calendar, 
   Clock, 
   Activity, 
@@ -20,8 +19,11 @@ import {
   Filter, 
   CheckCircle2, 
   Sparkles,
-  ExternalLink
+  Search,
+  ChevronRight,
+  Info
 } from 'lucide-react';
+import { ShareableRecordModal } from '../components/common/ShareableRecordModal';
 
 export const HealthHistoryPage: React.FC = () => {
   const { 
@@ -34,100 +36,130 @@ export const HealthHistoryPage: React.FC = () => {
     addToast 
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'readings' | 'alerts' | 'appointments' | 'meds'>('readings');
-  const [dateFilter, setDateFilter] = useState<'all' | '7d' | '30d'>('all');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'readings' | 'appointments' | 'meds' | 'alerts'>('timeline');
+  const [dateFilter, setDateFilter] = useState<'all' | '7d' | '30d' | 't1' | 't2' | 't3'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [selectedRecordDetail, setSelectedRecordDetail] = useState<{
+    title: string;
+    type: string;
+    date: string;
+    status: string;
+    source: string;
+    details: string;
+  } | null>(null);
 
-  // Generate downloadable text / html report
-  const handleDownloadReport = () => {
-    const reportHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>MatriCare Maternal Health Summary - ${patient.name}</title>
-        <style>
-          body { font-family: sans-serif; padding: 24px; color: #29213A; }
-          .header { border-bottom: 2px solid #8B5FBF; padding-bottom: 12px; margin-bottom: 16px; }
-          .title { font-size: 24px; font-bold; color: #503477; }
-          .demo-notice { background: #FAF6FE; border: 1px dashed #DCBEEF; padding: 8px; font-size: 11px; margin: 12px 0; color: #766C82; }
-          table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
-          th, td { border: 1px solid #EDE3F7; padding: 8px; text-align: left; }
-          th { background: #FAF6FE; color: #503477; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="title">MatriCare — Maternal Clinical Health Record</div>
-          <p>Generated for: <strong>${patient.name}</strong> (DOB: ${patient.dob}, Phone: ${patient.phone})</p>
-          <p>Gestational Stage: <strong>Week ${patient.pregnancyWeek} (Trimester ${patient.trimester})</strong> • EDD: <strong>${patient.estimatedDueDate}</strong></p>
-          <p>Assigned ASHA Worker: ${ashaWorker.name} (${ashaWorker.phone}) • Sub-centre: ${ashaWorker.subCentre}</p>
-        </div>
-
-        <div class="demo-notice">
-          <strong>DEMO CLINICAL DATA NOTICE:</strong> This exported record is generated from the MatriCare demonstration environment for evaluation and health tracking awareness. It does not replace signed medical certifications.
-        </div>
-
-        <h3>Recent Vitals & Sensor Readings</h3>
-        <table>
-          <tr><th>Metric</th><th>Value</th><th>Status</th><th>Source</th><th>Timestamp</th></tr>
-          ${readings.map(r => `<tr><td>${r.type}</td><td>${r.value} ${r.unit}</td><td>${r.status}</td><td>${r.source}</td><td>${r.timestamp}</td></tr>`).join('')}
-        </table>
-
-        <h3>Antenatal Appointments</h3>
-        <table>
-          <tr><th>Visit</th><th>Date</th><th>Doctor / Facility</th><th>Type</th><th>Status</th></tr>
-          ${appointments.map(a => `<tr><td>${a.title}</td><td>${a.date} (${a.time})</td><td>${a.doctorName} • ${a.facility}</td><td>${a.type}</td><td>${a.status}</td></tr>`).join('')}
-        </table>
-
-        <h3>Medication History Logs</h3>
-        <table>
-          <tr><th>Medication</th><th>Dosage</th><th>Scheduled</th><th>Logged At</th><th>Status</th></tr>
-          ${medicationLogs.map(m => `<tr><td>${m.medicationName}</td><td>${m.dosage}</td><td>${m.scheduledTime}</td><td>${m.date} ${m.actionTime}</td><td>${m.status}</td></tr>`).join('')}
-        </table>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([reportHtml], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `MatriCare_Report_${patient.name.replace(/\s+/g, '_')}_Week${patient.pregnancyWeek}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    addToast('Downloaded Maternal Health Summary Report', 'success');
-    setIsExportModalOpen(false);
-  };
-
-  const isWithinDateFilter = (dateOrTimestampStr: string, filter: 'all' | '7d' | '30d'): boolean => {
+  // Robust Date Filtering Logic
+  const isWithinDateFilter = (dateOrTimestampStr: string, filter: 'all' | '7d' | '30d' | 't1' | 't2' | 't3'): boolean => {
     if (filter === 'all') return true;
+
     const lower = (dateOrTimestampStr || '').toLowerCase();
-    if (lower.includes('today') || lower.includes('just now') || lower.includes('yesterday') || lower.includes('3 days ago')) {
-      return true;
+    const isRecent = lower.includes('today') || lower.includes('just now') || lower.includes('yesterday') || lower.includes('3 days ago');
+
+    if (filter === '7d') {
+      if (isRecent) return true;
+      const parsed = new Date(dateOrTimestampStr);
+      if (!isNaN(parsed.getTime())) {
+        const diffDays = Math.abs((Date.now() - parsed.getTime()) / (1000 * 60 * 60 * 24));
+        return diffDays <= 7;
+      }
+      return false;
     }
-    const parsed = new Date(dateOrTimestampStr);
-    if (!isNaN(parsed.getTime())) {
-      const refDate = new Date('2026-10-21');
-      const diffDays = Math.abs((refDate.getTime() - parsed.getTime()) / (1000 * 60 * 60 * 24));
-      if (filter === '7d') return diffDays <= 7;
-      if (filter === '30d') return diffDays <= 30;
+
+    if (filter === '30d') {
+      if (isRecent) return true;
+      const parsed = new Date(dateOrTimestampStr);
+      if (!isNaN(parsed.getTime())) {
+        const diffDays = Math.abs((Date.now() - parsed.getTime()) / (1000 * 60 * 60 * 24));
+        return diffDays <= 30;
+      }
+      return false;
     }
-    return filter === '30d';
+
+    // Trimester-based filters
+    if (filter === 't1') {
+      return lower.includes('aug') || lower.includes('jul') || lower.includes('jun') || lower.includes('t1');
+    }
+    if (filter === 't2') {
+      return lower.includes('today') || lower.includes('oct') || lower.includes('sep') || isRecent;
+    }
+    if (filter === 't3') {
+      return lower.includes('nov') || lower.includes('dec');
+    }
+
+    return true;
   };
 
-  const filteredReadings = readings.filter((r) => isWithinDateFilter(r.timestamp, dateFilter));
-  const filteredAppointments = appointments.filter((a) => isWithinDateFilter(a.date, dateFilter));
-  const filteredMedicationLogs = medicationLogs.filter((m) => isWithinDateFilter(m.date, dateFilter));
-  const filteredAlerts = alerts.filter((a) => isWithinDateFilter(a.timestamp, dateFilter));
+  const matchesSearch = (text: string) => {
+    if (!searchQuery.trim()) return true;
+    return text.toLowerCase().includes(searchQuery.toLowerCase());
+  };
+
+  const filteredReadings = readings
+    .filter((r) => isWithinDateFilter(r.timestamp, dateFilter))
+    .filter((r) => matchesSearch(`${r.type} ${r.value} ${r.source} ${r.notes || ''}`));
+
+  const filteredAppointments = appointments
+    .filter((a) => isWithinDateFilter(a.date, dateFilter))
+    .filter((a) => matchesSearch(`${a.title} ${a.doctorName} ${a.facility} ${a.type}`));
+
+  const filteredMedicationLogs = medicationLogs
+    .filter((m) => isWithinDateFilter(m.date, dateFilter))
+    .filter((m) => matchesSearch(`${m.medicationName} ${m.dosage} ${m.status}`));
+
+  const filteredAlerts = alerts
+    .filter((a) => isWithinDateFilter(a.timestamp, dateFilter))
+    .filter((a) => matchesSearch(`${a.title} ${a.description} ${a.severity}`));
+
+  // Unified Chronological Timeline Items
+  const timelineItems = [
+    ...filteredReadings.map((r) => ({
+      id: r.id,
+      kind: 'vital' as const,
+      title: `${r.type.toUpperCase()}: ${r.value} ${r.unit}`,
+      subtitle: `${r.source} · Status: ${r.status}`,
+      date: r.timestamp,
+      badge: r.status === 'normal' ? 'Normal' : 'Attention',
+      badgeVariant: r.status === 'normal' ? ('normal' as const) : ('attention' as const),
+      raw: r,
+    })),
+    ...filteredAppointments.map((a) => ({
+      id: a.id,
+      kind: 'appointment' as const,
+      title: a.title,
+      subtitle: `${a.doctorName} · ${a.facility}`,
+      date: `${a.date} at ${a.time}`,
+      badge: a.status,
+      badgeVariant: a.status === 'completed' ? ('success' as const) : ('lavender' as const),
+      raw: a,
+    })),
+    ...filteredMedicationLogs.map((m) => ({
+      id: m.id,
+      kind: 'med' as const,
+      title: `${m.medicationName} (${m.dosage})`,
+      subtitle: `Scheduled: ${m.scheduledTime} · Logged: ${m.date} at ${m.actionTime}`,
+      date: `${m.date} at ${m.actionTime}`,
+      badge: m.status === 'taken' ? 'Dose Taken' : 'Skipped',
+      badgeVariant: m.status === 'taken' ? ('success' as const) : ('skipped' as const),
+      raw: m,
+    })),
+    ...filteredAlerts.map((alt) => ({
+      id: alt.id,
+      kind: 'alert' as const,
+      title: alt.title,
+      subtitle: alt.description,
+      date: alt.timestamp,
+      badge: alt.severity,
+      badgeVariant: alt.severity === 'critical' ? ('critical' as const) : ('warning' as const),
+      raw: alt,
+    })),
+  ];
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col pb-12">
       <Header
-        title="Health History & Reports"
-        subtitle="Patient Care Records"
+        title="Nine-Month Health History"
+        subtitle="Longitudinal Health Dossier"
         showBack
         backTo="/home"
         rightAction={
@@ -150,13 +182,13 @@ export const HealthHistoryPage: React.FC = () => {
           <div className="flex items-center justify-between gap-3">
             <div>
               <span className="text-[10px] font-bold text-[#8B5FBF] uppercase tracking-wide">
-                Comprehensive Maternal Dossier
+                Comprehensive 9-Month Dossier
               </span>
               <h2 className="text-sm font-bold text-[#29213A] mt-0.5">
-                Generate Doctor-Ready Summary
+                Doctor-Ready Health Summary
               </h2>
-              <p className="text-xs text-[#766C82] mt-0.5">
-                Download a clean report of your vitals, scans, and medicines to share with your obstetrician.
+              <p className="text-xs text-[#766C82] mt-0.5 leading-relaxed">
+                Export verified timeline of vitals, ANC check-ups, scans, and supplement adherence.
               </p>
             </div>
             <Button
@@ -165,16 +197,29 @@ export const HealthHistoryPage: React.FC = () => {
               onClick={() => setIsExportModalOpen(true)}
               icon={<FileText className="w-4 h-4" />}
             >
-              Preview
+              Export
             </Button>
           </div>
         </Card>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-3 text-[#766C82]" />
+          <input
+            type="text"
+            placeholder="Search records by keyword, doctor, scan, or vital..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2.5 bg-white rounded-2xl border border-[#EDE3F7] text-xs text-[#29213A] placeholder-[#766C82] focus:outline-none focus:ring-2 focus:ring-[#8B5FBF]"
+          />
+        </div>
 
         {/* Tab Selector */}
         <TabSelector
           activeTab={activeTab}
           onChange={(tab) => setActiveTab(tab)}
           tabs={[
+            { id: 'timeline', label: 'Timeline', badge: timelineItems.length },
             { id: 'readings', label: 'Vitals', badge: filteredReadings.length },
             { id: 'appointments', label: 'Check-ups', badge: filteredAppointments.length },
             { id: 'meds', label: 'Med Logs', badge: filteredMedicationLogs.length },
@@ -183,20 +228,23 @@ export const HealthHistoryPage: React.FC = () => {
         />
 
         {/* Date Filter Pills */}
-        <div className="flex items-center justify-between text-xs pt-1">
+        <div className="flex flex-col gap-1.5 text-xs">
           <span className="text-[#766C82] font-semibold flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5 text-[#8B5FBF]" /> Filter Interval:
+            <Filter className="w-3.5 h-3.5 text-[#8B5FBF]" /> Filter Interval / Trimester:
           </span>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             {[
               { id: 'all', label: 'All Records' },
               { id: '7d', label: 'Past 7 Days' },
               { id: '30d', label: 'Past 30 Days' },
+              { id: 't1', label: 'Trimester 1' },
+              { id: 't2', label: 'Trimester 2' },
+              { id: 't3', label: 'Trimester 3' },
             ].map((f) => (
               <button
                 key={f.id}
                 onClick={() => setDateFilter(f.id as any)}
-                className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   dateFilter === f.id
                     ? 'bg-[#8B5FBF] text-white shadow-soft-sm'
                     : 'bg-white text-[#766C82] border border-[#EDE3F7]'
@@ -208,173 +256,151 @@ export const HealthHistoryPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Tab 1: Vitals Readings */}
+        {/* Tab: Unified Timeline */}
+        {activeTab === 'timeline' && (
+          <div className="space-y-2.5">
+            {timelineItems.length === 0 ? (
+              <div className="p-6 text-center text-xs text-[#766C82] bg-white rounded-2xl border border-[#EDE3F7]">
+                No records match the selected date or search filter.
+              </div>
+            ) : (
+              timelineItems.map((item) => (
+                <Card
+                  key={item.id}
+                  interactive
+                  onClick={() =>
+                    setSelectedRecordDetail({
+                      title: item.title,
+                      type: item.kind.toUpperCase(),
+                      date: item.date,
+                      status: item.badge,
+                      source: item.subtitle,
+                      details: JSON.stringify(item.raw, null, 2),
+                    })
+                  }
+                  className="p-3.5 bg-white border-[#EDE3F7] space-y-1.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <Badge variant={item.badgeVariant as any} size="sm">
+                      {item.badge}
+                    </Badge>
+                    <span className="text-[10px] text-[#766C82]">{item.date}</span>
+                  </div>
+                  <h4 className="text-xs font-bold text-[#29213A]">{item.title}</h4>
+                  <p className="text-[11px] text-[#766C82]">{item.subtitle}</p>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Tab: Vitals */}
         {activeTab === 'readings' && (
           <div className="space-y-2.5">
-            {filteredReadings.length === 0 ? (
-              <div className="p-6 text-center text-xs text-[#766C82] bg-white rounded-2xl border border-[#EDE3F7]">
-                No vital readings recorded within the selected timeframe.
-              </div>
-            ) : (
-              filteredReadings.map((reading) => (
-                <Card key={reading.id} className="p-3.5 bg-white border-[#EDE3F7]">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-[#EDE3F7] text-[#8B5FBF] flex items-center justify-center">
-                        <Activity className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-bold text-[#29213A] uppercase tracking-wide">
-                          {reading.type}
-                        </h3>
-                        <p className="text-sm font-extrabold text-[#503477]">
-                          {reading.value} <span className="text-xs font-normal text-[#766C82]">{reading.unit}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <Badge variant={reading.status === 'normal' ? 'normal' : 'attention'} size="sm">
-                        {reading.status === 'normal' ? 'Normal' : 'Attention'}
-                      </Badge>
-                      <p className="text-[10px] text-[#766C82] mt-1">
-                        {reading.source} • {reading.timestamp}
-                      </p>
-                    </div>
-                  </div>
-
-                  {reading.notes && (
-                    <p className="text-[11px] text-[#766C82] mt-2 pt-2 border-t border-[#F6F0FC] italic">
-                      "{reading.notes}"
-                    </p>
-                  )}
-                </Card>
-              ))
-            )}
+            {filteredReadings.map((r) => (
+              <Card key={r.id} className="p-3.5 bg-white border-[#EDE3F7] flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-[#29213A] uppercase">{r.type}</span>
+                  <p className="text-sm font-extrabold text-[#503477]">
+                    {r.value} <span className="text-xs text-[#766C82] font-normal">{r.unit}</span>
+                  </p>
+                  <span className="text-[10px] text-[#766C82]">{r.source} · {r.timestamp}</span>
+                </div>
+                <Badge variant={r.status === 'normal' ? 'normal' : 'attention'} size="sm">
+                  {r.status}
+                </Badge>
+              </Card>
+            ))}
           </div>
         )}
 
-        {/* Tab 2: Check-up Records */}
+        {/* Tab: Check-ups */}
         {activeTab === 'appointments' && (
           <div className="space-y-2.5">
-            {filteredAppointments.length === 0 ? (
-              <div className="p-6 text-center text-xs text-[#766C82] bg-white rounded-2xl border border-[#EDE3F7]">
-                No check-ups found within the selected timeframe.
-              </div>
-            ) : (
-              filteredAppointments.map((apt) => (
-                <Card key={apt.id} className="p-3.5 bg-white border-[#EDE3F7] space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="lavender" size="sm">{apt.type}</Badge>
-                    <Badge variant={apt.status === 'completed' ? 'success' : apt.status === 'upcoming' ? 'normal' : 'skipped'} size="sm">
-                      {apt.status}
-                    </Badge>
-                  </div>
-                  <h3 className="text-xs font-bold text-[#29213A]">{apt.title}</h3>
-                  <p className="text-[11px] text-[#766C82]">
-                    {apt.doctorName} • {apt.facility} • {apt.date} at {apt.time}
-                  </p>
-                </Card>
-              ))
-            )}
+            {filteredAppointments.map((a) => (
+              <Card key={a.id} className="p-3.5 bg-white border-[#EDE3F7] space-y-1">
+                <div className="flex items-center justify-between">
+                  <Badge variant="lavender" size="sm">{a.type}</Badge>
+                  <Badge variant={a.status === 'completed' ? 'success' : 'normal'} size="sm">
+                    {a.status}
+                  </Badge>
+                </div>
+                <h4 className="text-xs font-bold text-[#29213A]">{a.title}</h4>
+                <p className="text-[11px] text-[#766C82]">
+                  {a.doctorName} · {a.facility} ({a.date} at {a.time})
+                </p>
+              </Card>
+            ))}
           </div>
         )}
 
-        {/* Tab 3: Medication Logs */}
+        {/* Tab: Medication Logs */}
         {activeTab === 'meds' && (
           <div className="space-y-2.5">
-            {filteredMedicationLogs.length === 0 ? (
-              <div className="p-6 text-center text-xs text-[#766C82] bg-white rounded-2xl border border-[#EDE3F7]">
-                No medication logs recorded within the selected timeframe.
-              </div>
-            ) : (
-              filteredMedicationLogs.map((log) => (
-                <Card key={log.id} className="p-3 bg-white border-[#EDE3F7] flex items-center justify-between text-xs">
-                  <div>
-                    <h3 className="font-bold text-[#29213A]">{log.medicationName}</h3>
-                    <p className="text-[10px] text-[#766C82]">
-                      {log.dosage} • {log.date} at {log.actionTime}
-                    </p>
-                  </div>
-                  <Badge variant={log.status === 'taken' ? 'taken' : 'skipped'} size="sm">
-                    {log.status === 'taken' ? 'Taken' : 'Skipped'}
-                  </Badge>
-                </Card>
-              ))
-            )}
+            {filteredMedicationLogs.map((m) => (
+              <Card key={m.id} className="p-3.5 bg-white border-[#EDE3F7] flex items-center justify-between text-xs">
+                <div>
+                  <h4 className="font-bold text-[#29213A]">{m.medicationName}</h4>
+                  <p className="text-[10px] text-[#766C82]">
+                    {m.dosage} · Scheduled: {m.scheduledTime}
+                  </p>
+                  <span className="text-[10px] text-[#8B5FBF]">Logged: {m.date} at {m.actionTime}</span>
+                </div>
+                <Badge variant={m.status === 'taken' ? 'success' : 'skipped'} size="sm">
+                  {m.status}
+                </Badge>
+              </Card>
+            ))}
           </div>
         )}
 
-        {/* Tab 4: Alerts */}
+        {/* Tab: Alerts */}
         {activeTab === 'alerts' && (
           <div className="space-y-2.5">
-            {filteredAlerts.length === 0 ? (
-              <div className="p-6 text-center text-xs text-[#766C82] bg-white rounded-2xl border border-[#EDE3F7]">
-                No alerts logged within the selected timeframe.
-              </div>
-            ) : (
-              filteredAlerts.map((al) => (
-                <Card key={al.id} className="p-3 bg-white border-[#EDE3F7] space-y-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[#29213A]">{al.title}</span>
-                    <Badge variant={al.status === 'resolved' ? 'success' : 'attention'} size="sm">
-                      {al.status}
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-[#766C82]">{al.description}</p>
-                  <p className="text-[10px] text-[#8B5FBF] pt-1">{al.timestamp}</p>
-                </Card>
-              ))
-            )}
+            {filteredAlerts.map((alt) => (
+              <Card key={alt.id} className="p-3.5 bg-white border-[#EDE3F7] space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Badge variant={alt.severity === 'critical' ? 'critical' : 'warning'} size="sm">
+                    {alt.severity}
+                  </Badge>
+                  <span className="text-[10px] text-[#766C82]">{alt.timestamp}</span>
+                </div>
+                <h4 className="text-xs font-bold text-[#29213A]">{alt.title}</h4>
+                <p className="text-xs text-[#766C82]">{alt.description}</p>
+              </Card>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Export Report Preview Modal */}
-      {isExportModalOpen && (
+      {/* Record Detail Modal */}
+      {selectedRecordDetail && (
         <Modal
-          isOpen={isExportModalOpen}
-          onClose={() => setIsExportModalOpen(false)}
-          title="Maternal Health Summary Export"
-          description="Doctor-ready clinical snapshot for antenatal consultations."
+          isOpen={!!selectedRecordDetail}
+          onClose={() => setSelectedRecordDetail(null)}
+          title={selectedRecordDetail.title}
+          description={`Record Type: ${selectedRecordDetail.type} · ${selectedRecordDetail.date}`}
           footer={
-            <div className="w-full flex items-center justify-between gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsExportModalOpen(false)}>
-                Close
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleDownloadReport}
-                icon={<Download className="w-4 h-4" />}
-              >
-                Download HTML / PDF Format
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => setSelectedRecordDetail(null)}>
+              Close
+            </Button>
           }
         >
-          <div className="space-y-3 text-xs">
-            <div className="p-3 bg-[#FAF6FE] rounded-2xl border border-[#EDE3F7] space-y-1">
-              <p className="font-bold text-[#503477]">
-                Patient: {patient.name} (Week {patient.pregnancyWeek})
-              </p>
-              <p className="text-[11px] text-[#766C82]">
-                Due Date: {patient.estimatedDueDate} • Blood Group: {patient.bloodGroup}
-              </p>
-              <p className="text-[11px] text-[#766C82]">
-                Primary Contact: {patient.phone} • ASHA Worker: {ashaWorker.name}
-              </p>
+          <div className="space-y-2.5 text-xs">
+            <div className="p-3 rounded-2xl bg-[#FAF6FE] border border-[#DCBEEF] space-y-1">
+              <p><strong>Status:</strong> {selectedRecordDetail.status}</p>
+              <p><strong>Source / Subtitle:</strong> {selectedRecordDetail.source}</p>
+              <p><strong>Timestamp:</strong> {selectedRecordDetail.date}</p>
             </div>
-
-            <div className="p-3 bg-white rounded-xl border border-[#EDE3F7] space-y-1 text-[11px] text-[#766C82]">
-              <p>• Includes {readings.length} latest vital records (Heart Rate, SpO2, Temp, BP, Kicks)</p>
-              <p>• Includes {appointments.length} antenatal ultrasound & clinical visits</p>
-              <p>• Includes {medicationLogs.length} verified supplement adherence entries</p>
-              <p>• Clearly labeled with demo provenance badge for ethical review</p>
-            </div>
+            <pre className="p-3 rounded-2xl bg-[#F6F0FC] font-mono text-[10px] text-[#503477] whitespace-pre-wrap max-h-48 overflow-y-auto">
+              {selectedRecordDetail.details}
+            </pre>
           </div>
         </Modal>
       )}
+
+      {/* Shareable Record Modal */}
+      <ShareableRecordModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
 
       <BottomNav />
     </div>

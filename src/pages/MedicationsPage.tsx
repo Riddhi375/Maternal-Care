@@ -30,6 +30,7 @@ export const MedicationsPage: React.FC = () => {
     medications, 
     medicationLogs, 
     markMedicationStatus, 
+    snoozeMedication,
     addMedication, 
     updateMedication, 
     deleteMedication 
@@ -39,6 +40,8 @@ export const MedicationsPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMed, setEditingMed] = useState<Medication | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [skippingMed, setSkippingMed] = useState<Medication | null>(null);
+  const [skipReason, setSkipReason] = useState('Nausea / morning vomiting');
 
   // Form State
   const [name, setName] = useState('');
@@ -289,6 +292,11 @@ export const MedicationsPage: React.FC = () => {
                         (Logged at {med.takenAt})
                       </span>
                     )}
+                    {med.snoozedUntil && (
+                      <span className="text-[#D58A35] ml-1 font-bold">
+                        (Snoozed until {med.snoozedUntil})
+                      </span>
+                    )}
                   </p>
                   <p className="text-[11px] text-[#766C82] leading-relaxed">
                     {med.instructions}
@@ -298,8 +306,8 @@ export const MedicationsPage: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Action Buttons: Mark Taken / Skip / Reset */}
-                <div className="flex items-center gap-2 pt-1">
+                {/* Action Buttons: Mark Taken / Skip / Reset / Snooze */}
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
                   {med.status === 'taken' ? (
                     <Button
                       size="sm"
@@ -338,12 +346,20 @@ export const MedicationsPage: React.FC = () => {
                         onClick={() => markMedicationStatus(med.id, 'taken')}
                         icon={<CheckCircle2 className="w-4 h-4" />}
                       >
-                        Mark as Taken
+                        Taken
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => snoozeMedication(med.id, 30)}
+                        icon={<Clock className="w-3.5 h-3.5" />}
+                      >
+                        Snooze
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => markMedicationStatus(med.id, 'skipped')}
+                        onClick={() => setSkippingMed(med)}
                         icon={<XCircle className="w-4 h-4 text-[#766C82]" />}
                       >
                         Skip
@@ -509,6 +525,52 @@ export const MedicationsPage: React.FC = () => {
           </span>
         </div>
       </Modal>
+
+      {/* Skip Dose with Clinical Reason Modal */}
+      {skippingMed && (
+        <Modal
+          isOpen={Boolean(skippingMed)}
+          onClose={() => setSkippingMed(null)}
+          title={`Skip Dose: ${skippingMed.name}`}
+          description="Please state a reason so your ASHA worker can assist if you are experiencing side effects."
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setSkippingMed(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => {
+                  markMedicationStatus(skippingMed.id, 'skipped', skipReason);
+                  setSkippingMed(null);
+                }}
+              >
+                Confirm Skip
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <FormField
+              label="Reason for Skipping"
+              as="select"
+              value={skipReason}
+              onChange={(e) => setSkipReason(e.target.value)}
+              options={[
+                { label: 'Morning Nausea / Vomiting', value: 'Nausea / morning vomiting' },
+                { label: 'Tablet out of stock / ran out', value: 'Ran out of tablets' },
+                { label: 'Severe constipation or stomach ache', value: 'Constipation or stomach distress' },
+                { label: 'Forgot at home / travel', value: 'Away from home' },
+                { label: 'Advised by doctor to pause', value: 'Physician instructed pause' },
+              ]}
+            />
+            <p className="text-[11px] text-[#766C82]">
+              ASHA worker Sunita Devi will be notified to review supplement tolerance during your next contact.
+            </p>
+          </div>
+        </Modal>
+      )}
 
       <BottomNav />
     </div>
